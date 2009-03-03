@@ -536,8 +536,6 @@ None. See the plugin documentation in the =.pm= file on detailed usage instructi
 |  CPAN Dependencies: | none |
 |  Other Dependencies: | none |
 |  Perl Version: | 5.005 |
-|  [[Foswiki:Extensions/Benchmark][Benchmarks]]: | %SYSTEMWEB%.GoodStyle nn%, %SYSTEMWEB%.FormattedSearch nn%, %TOPIC% nn% |
 | Home: | http://foswiki.org/Extensions/%TOPIC% |
 | Feedback: | http://foswiki.org/Extensions/%TOPIC%Dev |
-| Appraisal: | http://foswiki.org/Extensions/%TOPIC%Appraisal |
 
