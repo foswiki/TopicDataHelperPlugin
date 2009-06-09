@@ -12,10 +12,10 @@
 # GNU General Public License for more details, published at
 # http://www.gnu.org/copyleft/gpl.html
 
-package TWiki::Plugins::TopicDataHelperPlugin;
+package Foswiki::Plugins::TopicDataHelperPlugin;
 
 use strict;
-use TWiki::Func;
+use Foswiki::Func;
 
 use vars qw($VERSION $RELEASE $pluginName $debug
 );
@@ -37,18 +37,18 @@ sub initPlugin {
     my ( $inTopic, $inWeb, $inUser, $inInstallWeb ) = @_;
 
     # check for Plugins.pm versions
-    if ( $TWiki::Plugins::VERSION < 1.026 ) {
-        TWiki::Func::writeWarning(
+    if ( $Foswiki::Plugins::VERSION < 1.026 ) {
+        Foswiki::Func::writeWarning(
             "Version mismatch between $pluginName and Plugins.pm");
         return 0;
     }
 
     # Get plugin debug flag
-    $debug = TWiki::Func::getPluginPreferencesFlag("DEBUG");
+    $debug = Foswiki::Func::getPluginPreferencesFlag("DEBUG");
 
     # Plugin correctly initialized
-    TWiki::Func::writeDebug(
-        "- TWiki::Plugins::${pluginName}::initPlugin( $inWeb.$inTopic ) is OK")
+    Foswiki::Func::writeDebug(
+        "- Foswiki::Plugins::${pluginName}::initPlugin( $inWeb.$inTopic ) is OK")
       if $debug;
 
     return 1;
@@ -100,7 +100,7 @@ sub createTopicData {
     my @topicsInWeb = ();
     my @webs =
       ( $inWebs eq '*' )
-      ? TWiki::Func::getListOfWebs('allowed')
+      ? Foswiki::Func::getListOfWebs('allowed')
       : split( qr/[\s,]+/, $inWebs );
     foreach my $web (@webs) {
         next if $web =~ qr/^_.*?$/;    # do not list webs with underscore
@@ -110,7 +110,7 @@ sub createTopicData {
         # get this web's topics
         my @webTopics =
           ( $inTopics eq '*' )
-          ? TWiki::Func::getTopicList($web)
+          ? Foswiki::Func::getTopicList($web)
           : split( qr/[\s,]+/, $inTopics );
 
         # prefix with web name
@@ -125,8 +125,8 @@ sub createTopicData {
 
         # if ($debug) {
         #     use Data::Dumper;
-        #     TWiki::Func::writeDebug("just added in web $web:");
-        #     TWiki::Func::writeDebug( Dumper( $topicData{$web} ) );
+        #     Foswiki::Func::writeDebug("just added in web $web:");
+        #     Foswiki::Func::writeDebug( Dumper( $topicData{$web} ) );
         # }
     }
     return \%topicData;
@@ -172,7 +172,7 @@ sub _createFileData {
 
         foreach my $attachment (@$attachments) {
             my $fd =
-              TWiki::Plugins::AttachmentListPlugin::FileData->new( $inWeb, $inTopic,
+              Foswiki::Plugins::AttachmentListPlugin::FileData->new( $inWeb, $inTopic,
                 $attachment );
             my $fileName = $fd->{name};
             $inTopicHash->{$inTopic}{$fileName} = \$fd;
@@ -187,7 +187,7 @@ sub _createFileData {
 
 ... and calls insertObjectData using:
 
-TWiki::Plugins::TopicDataHelperPlugin::insertObjectData(
+Foswiki::Plugins::TopicDataHelperPlugin::insertObjectData(
 	$topicData, \&_createFileData
 );
 
@@ -222,9 +222,9 @@ Filters topic data objects by checking if the user $inWikiUserName has view acce
 Removes topic data if the user does not have permission to view the topic.
 
 Example:
-my $user = TWiki::Func::getWikiName();
-my $wikiUserName = TWiki::Func::userToWikiName( $user, 1 );
-TWiki::Plugins::TopicDataHelperPlugin::filterTopicDataByViewPermission(
+my $user = Foswiki::Func::getWikiName();
+my $wikiUserName = Foswiki::Func::userToWikiName( $user, 1 );
+Foswiki::Plugins::TopicDataHelperPlugin::filterTopicDataByViewPermission(
 	\%topicData, $wikiUserName );
         
 Function parameters:
@@ -247,7 +247,7 @@ sub filterTopicDataByViewPermission {
         while ( ( my $topic ) = each %$topicHash ) {
 
             if (
-                !TWiki::Func::checkAccessPermission(
+                !Foswiki::Func::checkAccessPermission(
                     'VIEW', $inWikiUserName, undef, $topic, $web
                 )
               )
@@ -274,7 +274,7 @@ FormFieldListPlugin uses this function to show topics between =fromdate= and =to
 
 From FormFieldListPlugin:
 if ( defined $inParams->{'fromdate'} || defined $inParams->{'todate'} ) {
-	TWiki::Plugins::TopicDataHelperPlugin::filterTopicDataByDateRange(
+	Foswiki::Plugins::TopicDataHelperPlugin::filterTopicDataByDateRange(
 		\%topicData, $inParams->{'fromdate'},
 		$inParams->{'todate'} );
 }
@@ -296,11 +296,11 @@ sub filterTopicDataByDateRange {
 
     my $fromEpoch =
       $inFromDate
-      ? TWiki::Time::parseTime("$inFromDate 00.00.00")
+      ? Foswiki::Time::parseTime("$inFromDate 00.00.00")
       : 0;
     my $toEpoch =
       $inToDate
-      ? TWiki::Time::parseTime("$inToDate 23.59.59")
+      ? Foswiki::Time::parseTime("$inToDate 23.59.59")
       : 2**31;
     my $dateKey = $inDateKey || 'date';
 
@@ -357,7 +357,7 @@ my $extensions =
   || undef;
 my $excludeExtensions = $inParams->{'excludeextension'} || undef;
 if ( defined $extensions || defined $excludeExtensions ) {
-	TWiki::Plugins::TopicDataHelperPlugin::filterTopicDataByProperty(
+	Foswiki::Plugins::TopicDataHelperPlugin::filterTopicDataByProperty(
 		\%topicData, 'extension', 0, $extensions, $excludeExtensions );
 }
 
@@ -384,20 +384,20 @@ sub filterTopicDataByProperty {
     my $excluded = makeHashFromString( $inExcludeValues, $inIsCaseSensitive );
 
     if ($debug) {
-        TWiki::Func::writeDebug("filterTopicDataByProperty:");
-        TWiki::Func::writeDebug("\t inPropertyKey=$inPropertyKey")
+        Foswiki::Func::writeDebug("filterTopicDataByProperty:");
+        Foswiki::Func::writeDebug("\t inPropertyKey=$inPropertyKey")
           if $inPropertyKey;
-        TWiki::Func::writeDebug("\t inIncludeValues=$inIncludeValues")
+        Foswiki::Func::writeDebug("\t inIncludeValues=$inIncludeValues")
           if $inIncludeValues;
-        TWiki::Func::writeDebug("\t inExcludeValues=$inExcludeValues")
+        Foswiki::Func::writeDebug("\t inExcludeValues=$inExcludeValues")
           if $inExcludeValues;
-        TWiki::Func::writeDebug(
+        Foswiki::Func::writeDebug(
             "\t included hash keys = ("
               . scalar( keys %$included ) . ")"
               . join ",",
             keys %$included
         ) if %$included;
-        TWiki::Func::writeDebug(
+        Foswiki::Func::writeDebug(
             "\t excluded hash keys = ("
               . scalar( keys %$excluded ) . ")"
               . join ",",
@@ -421,19 +421,19 @@ sub filterTopicDataByProperty {
                   if ( keys %$excluded
                     && $$excluded{ $$object->{$inPropertyKey} } );
                 if ($debug) {
-                    TWiki::Func::writeDebug("\t\t ---");
-                    TWiki::Func::writeDebug("\t\t key=$key");
-                    TWiki::Func::writeDebug("\t\t object=$object") if $object;
-                    TWiki::Func::writeDebug(
+                    Foswiki::Func::writeDebug("\t\t ---");
+                    Foswiki::Func::writeDebug("\t\t key=$key");
+                    Foswiki::Func::writeDebug("\t\t object=$object") if $object;
+                    Foswiki::Func::writeDebug(
                         "\t\t value=$$object->{$inPropertyKey}")
                       if $$object->{$inPropertyKey};
-                    TWiki::Func::writeDebug(
+                    Foswiki::Func::writeDebug(
                         "\t\t included=$$included{ $$object->{$inPropertyKey}}")
                       if $$included{ $$object->{$inPropertyKey} };
-                    TWiki::Func::writeDebug(
+                    Foswiki::Func::writeDebug(
                         "\t\t excluded=$$excluded{ $$object->{$inPropertyKey}}")
                       if $$excluded{ $$object->{$inPropertyKey} };
-                    TWiki::Func::writeDebug("\t\t isInValid=$isInValid");
+                    Foswiki::Func::writeDebug("\t\t isInValid=$isInValid");
                 }
                 if ($isInValid) {
                     delete $inTopicData->{$web}{$topic}{$key};
@@ -443,8 +443,8 @@ sub filterTopicDataByProperty {
     }
 
  # use Data::Dumper;
- # TWiki::Func::writeDebug("After _filterTopicDataByIncludedAndExcludedFiles:");
- # TWiki::Func::writeDebug( Dumper( $inTopicData ) );
+ # Foswiki::Func::writeDebug("After _filterTopicDataByIncludedAndExcludedFiles:");
+ # Foswiki::Func::writeDebug( Dumper( $inTopicData ) );
 }
 
 =pod
@@ -521,7 +521,7 @@ For a data structure:
 
 The call:
 my $fields =
-      TWiki::Plugins::TopicDataHelperPlugin::getListOfObjectData($topicData);
+      Foswiki::Plugins::TopicDataHelperPlugin::getListOfObjectData($topicData);
       
 ... returns a list of FormFieldData objects.
 
@@ -569,7 +569,7 @@ sub stringify {
 }
 
 Call this method with:
-my $list = TWiki::Plugins::TopicDataHelperPlugin::stringifyTopicData($inTopicData);
+my $list = Foswiki::Plugins::TopicDataHelperPlugin::stringifyTopicData($inTopicData);
 my $text = join "\n", @$list;
 
 Function parameters:
@@ -608,7 +608,7 @@ Sort objects by property (sort key). Calls _sortObjectsByProperty.
 
 Function parameters:
    * =\@inObjectData= (array reference) - list of data objects (NOT the topic data!)
-   * =$inSortOrder= (int) - value of %sortDirections: either $TWiki::Plugins::TopicDataHelperPlugin::sortDirections{'ASCENDING'}, $TWiki::Plugins::TopicDataHelperPlugin::sortDirections{'DESCENDING'} or $TWiki::Plugins::TopicDataHelperPlugin::sortDirections{'NONE'}
+   * =$inSortOrder= (int) - value of %sortDirections: either $Foswiki::Plugins::TopicDataHelperPlugin::sortDirections{'ASCENDING'}, $Foswiki::Plugins::TopicDataHelperPlugin::sortDirections{'DESCENDING'} or $Foswiki::Plugins::TopicDataHelperPlugin::sortDirections{'NONE'}
    * =$inSortKey= (string) - primary sort key; this will be a property of your data object
    * =$inCompareMode= (string) - sort mode of primary key, either 'numeric' or 'alphabetical'
    * =$inNameKey= (string) - to be used as secondary sort key; must be alphabetical; this will be a property of your data object
@@ -641,7 +641,7 @@ Private function. Sort objects by property (sort key).
 
 Function parameters:
    * =\@inObjectData= (array reference) - list of data objects (NOT the topic data!)
-   * =$inSortOrder= (int) - value of %sortDirections: either $TWiki::Plugins::TopicDataHelperPlugin::sortDirections{'ASCENDING'}, $TWiki::Plugins::TopicDataHelperPlugin::sortDirections{'DESCENDING'} or $TWiki::Plugins::TopicDataHelperPlugin::sortDirections{'NONE'}
+   * =$inSortOrder= (int) - value of %sortDirections: either $Foswiki::Plugins::TopicDataHelperPlugin::sortDirections{'ASCENDING'}, $Foswiki::Plugins::TopicDataHelperPlugin::sortDirections{'DESCENDING'} or $Foswiki::Plugins::TopicDataHelperPlugin::sortDirections{'NONE'}
    * =$inSortKey= (string) - primary sort key; this will be a property of your data object
    * =$inCompareMode= (string) - sort mode of primary key, either 'numeric' or 'alphabetical'
    * =$inSecondaryKey= (string) - to be used as secondary sort key; must be alphabetical; this will be a property of your data object
