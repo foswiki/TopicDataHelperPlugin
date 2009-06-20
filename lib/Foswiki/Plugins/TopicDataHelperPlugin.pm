@@ -17,7 +17,7 @@ package Foswiki::Plugins::TopicDataHelperPlugin;
 use strict;
 use Foswiki::Func;
 
-use vars qw($VERSION $RELEASE $pluginName $debug
+use vars qw($VERSION $RELEASE $debug
 );
 
 # This should always be $Rev$ so that Foswiki can determine the checked-in
@@ -28,10 +28,15 @@ $VERSION = '$Rev$';
 # This is a free-form string you can use to "name" your own plugin version.
 # It is *not* used by the build automation tools, but is reported as part
 # of the version number in PLUGINDESCRIPTIONS.
-$RELEASE = '1.0';
+$RELEASE = '1.1.1';
 
-$pluginName = 'TopicDataHelperPlugin';
+our $pluginName = 'TopicDataHelperPlugin';
+our $debug;
+our $NO_PREFS_IN_TOPIC = 1;
 our %sortDirections = ( 'ASCENDING', 1, 'NONE', 0, 'DESCENDING', -1 );
+my $topic;
+my $web;
+my $user;
 
 sub initPlugin {
     my ( $inTopic, $inWeb, $inUser, $inInstallWeb ) = @_;
@@ -43,13 +48,16 @@ sub initPlugin {
         return 0;
     }
 
+    $web   = $inWeb;
+    $topic = $inTopic;
+    $user  = $inUser;
+
     # Get plugin debug flag
-    $debug = Foswiki::Func::getPluginPreferencesFlag("DEBUG");
+    $debug = Foswiki::Func::getPreferencesFlag('TOPICDATAHELPERPLUGIN_DEBUG');
 
     # Plugin correctly initialized
-    Foswiki::Func::writeDebug(
-        "- Foswiki::Plugins::${pluginName}::initPlugin( $inWeb.$inTopic ) is OK")
-      if $debug;
+    _debug(
+        "Foswiki::Plugins::${pluginName}::initPlugin( $inWeb.$inTopic ) is OK");
 
     return 1;
 }
@@ -98,12 +106,14 @@ sub createTopicData {
     my $excludeWebs   = makeHashFromString( $inExcludeWebs,   1 );
 
     my @topicsInWeb = ();
+    my $webs = $inWebs || $web;
+
     my @webs =
-      ( $inWebs eq '*' )
+      ( $webs eq '*' )
       ? Foswiki::Func::getListOfWebs('allowed')
-      : split( qr/[\s,]+/, $inWebs );
+      : split( qr/[\s,]+/o, $webs );
     foreach my $web (@webs) {
-        next if $web =~ qr/^_.*?$/;    # do not list webs with underscore
+        next if $web =~ qr/^_.*?$/o;    # do not list webs with underscore
         next if $topicData{$web};           # already done
         next if ( $$excludeWebs{$web} );    # skip if web is to be excluded
 
@@ -111,23 +121,33 @@ sub createTopicData {
         my @webTopics =
           ( $inTopics eq '*' )
           ? Foswiki::Func::getTopicList($web)
-          : split( qr/[\s,]+/, $inTopics );
+          : split( qr/[\s,]+/o, $inTopics );
 
         # prefix with web name
         foreach my $topic (@webTopics) {
+
+            my $dotWeb   = undef;
+            my $dotTopic = undef;
+            if ( $topic =~ m/^((.*?)\.)*(.*?)$/o ) {
+                $dotWeb = $2 || $web;
+                $dotTopic = $3;
+            }
+            next if ( $$excludeWebs{$dotWeb} );  # skip if web is to be excluded
             next
-              if ( $$excludeTopics{$topic} );  # skip if topic is to be excluded
+              if ( $$excludeTopics{$dotTopic} )
+              ;    # skip if topic is to be excluded
             next
-              if ( $$excludeTopics{"$web.$topic"} )
+              if ( $$excludeTopics{"$dotWeb.$dotTopic"} )
               ;    # skip if web.topic is to be excluded
-            $topicData{$web}{$topic} = 1;
+
+            $topicData{$dotWeb}{$dotTopic} = 1;
         }
 
-        # if ($debug) {
-        #     use Data::Dumper;
-        #     Foswiki::Func::writeDebug("just added in web $web:");
-        #     Foswiki::Func::writeDebug( Dumper( $topicData{$web} ) );
-        # }
+        if ($debug) {
+            use Data::Dumper;
+            _debug("$pluginName -- createTopicData : just added to web $web:");
+            _debug( Dumper( $topicData{$web} ) );
+        }
     }
     return \%topicData;
 }
@@ -202,14 +222,19 @@ Returns nothing.
 
 sub insertObjectData {
     my ( $inTopicData, $inCreateObjectDataFunc, $inProperties ) = @_;
-    my %topicData = %$inTopicData;
 
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
         while ( ( my $topic ) = each %$topicHash ) {
             my $obj = $inCreateObjectDataFunc->(
                 $topicHash, $web, $topic, $inProperties
             );
         }
+    }
+
+    if ($debug) {
+        use Data::Dumper;
+        _debug("$pluginName -- insertObjectData completed");
+        _debug( "inTopicData=" . Dumper($inTopicData) );
     }
 }
 
@@ -238,10 +263,8 @@ Returns nothing.
 sub filterTopicDataByViewPermission {
     my ( $inTopicData, $inWikiUserName ) = @_;
 
-    my %topicData = %$inTopicData;
-
     # find object references in hash
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
 
         # {web} => hash of topics
         while ( ( my $topic ) = each %$topicHash ) {
@@ -292,8 +315,6 @@ Returns nothing.
 sub filterTopicDataByDateRange {
     my ( $inTopicData, $inFromDate, $inToDate, $inDateKey ) = @_;
 
-    my %topicData = %$inTopicData;
-
     my $fromEpoch =
       $inFromDate
       ? Foswiki::Time::parseTime("$inFromDate 00.00.00")
@@ -305,7 +326,7 @@ sub filterTopicDataByDateRange {
     my $dateKey = $inDateKey || 'date';
 
     # find object references in hash
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
 
         # {web} => hash of topics
         while ( ( my $topic, my $objectDataHash ) = each %$topicHash ) {
@@ -378,13 +399,12 @@ sub filterTopicDataByProperty {
         $inIncludeValues, $inExcludeValues
     ) = @_;
 
-    my %topicData = %$inTopicData;
-
     my $included = makeHashFromString( $inIncludeValues, $inIsCaseSensitive );
     my $excluded = makeHashFromString( $inExcludeValues, $inIsCaseSensitive );
 
     if ($debug) {
-        Foswiki::Func::writeDebug("filterTopicDataByProperty:");
+        Foswiki::Func::writeDebug(
+            "TopicDataHelperPlugin::filterTopicDataByProperty");
         Foswiki::Func::writeDebug("\t inPropertyKey=$inPropertyKey")
           if $inPropertyKey;
         Foswiki::Func::writeDebug("\t inIncludeValues=$inIncludeValues")
@@ -406,7 +426,7 @@ sub filterTopicDataByProperty {
     }
 
     # find object references in hash
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
 
         # {web} => hash of topics
         while ( ( my $topic, my $objectDataHash ) = each %$topicHash ) {
@@ -442,9 +462,9 @@ sub filterTopicDataByProperty {
         }
     }
 
- # use Data::Dumper;
- # Foswiki::Func::writeDebug("After _filterTopicDataByIncludedAndExcludedFiles:");
- # Foswiki::Func::writeDebug( Dumper( $inTopicData ) );
+# use Data::Dumper;
+# Foswiki::Func::writeDebug("After _filterTopicDataByIncludedAndExcludedFiles:");
+# Foswiki::Func::writeDebug( Dumper( $inTopicData ) );
 }
 
 =pod
@@ -472,10 +492,8 @@ Returns nothing.
 sub filterTopicDataByRegexMatch {
     my ( $inTopicData, $inPropertyKey, $inIncludeRegex, $inExcludeRegex ) = @_;
 
-    my %topicData = %$inTopicData;
-
     # find object references in hash
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
 
         # {web} => hash of topics
         while ( ( my $topic, my $objectDataHash ) = each %$topicHash ) {
@@ -535,11 +553,10 @@ Returns a reference to an unsorted array of data objects.
 sub getListOfObjectData {
     my ($inTopicData) = @_;
 
-    my %topicData = %$inTopicData;
-    my @objects   = ();
+    my @objects = ();
 
     # find object references in hash
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
 
         # {web} => hash of topics
         while ( ( my $topic, my $objectDataHash ) = each %$topicHash ) {
@@ -582,11 +599,10 @@ Returns a reference to an unsorted array of data objects.
 sub stringifyTopicData {
     my ($inTopicData) = @_;
 
-    my %topicData = %$inTopicData;
-    my @objects   = ();
+    my @objects = ();
 
     # find object references in hash
-    while ( ( my $web, my $topicHash ) = each %topicData ) {
+    while ( ( my $web, my $topicHash ) = each %{$inTopicData} ) {
 
         # {web} => hash of topics
         while ( ( my $topic, my $objectDataHash ) = each %$topicHash ) {
@@ -742,6 +758,13 @@ sub makeHashFromString {
         $hash{$_} = $count++;
     }
     return \%hash;
+}
+
+sub _debug {
+    my ($inText) = @_;
+
+    Foswiki::Func::writeDebug($inText)
+      if $debug;
 }
 
 1;
