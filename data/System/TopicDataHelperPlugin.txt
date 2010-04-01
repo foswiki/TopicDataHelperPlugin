@@ -1,7 +1,9 @@
 %META:TOPICINFO{author="ProjectContributor" date="1113307434" format="1.0" version="1.1"}%
 ---+!! Topic Data helper plugin
 
-This plugin is to be used with other plugins - it is a helper plugin for collecting, filtering and sorting data objects. This plugin is used by Foswiki:Extensions/AttachmentListPlugin and Foswiki:Extensions/FormFieldListPlugin to process this kind of parameters:
+Helper plugin for collecting, filtering and sorting data objects, to be used by other plugins.
+
+This plugin is used by Foswiki:Extensions/AttachmentListPlugin and Foswiki:Extensions/FormFieldListPlugin to process this kind of parameters:
 
 <verbatim>
 %ATTACHMENTLIST{
@@ -499,31 +501,27 @@ my $list = Foswiki::Plugins::TopicDataHelperPlugin::stringifyTopicData($topicDat
 my $text = join "\n", @$list;
 </verbatim>
 
----++ Syntax Rules
-
-None. See the plugin documentation in the =.pm= file on detailed usage instructions.
-
-<!--
-   * Set SHORTDESCRIPTION = Helper plugin for collecting, filtering and sorting data objects.
--->
 
 ---++ Plugin Installation Instructions
 %$INSTALL_INSTRUCTIONS%
 
 
 ---++ Plugin Info
+<!--
+   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
+-->
 
-| Authors: | Foswiki:Main.ArthurClemens |
-| Copyright &copy;: | Foswiki:Main.ArthurClemens |
-| License: | [[http://www.gnu.org/copyleft/gpl.html][GPL]] |
-|  Plugin Version: | 20 Jun 2009 (V1.1.1)  |
+|  Authors: | Foswiki:Main.ArthurClemens |
+|  Copyright &copy;: | Foswiki:Main.ArthurClemens |
+|  License: | [[http://www.gnu.org/copyleft/gpl.html][GPL]] |
+|  Version: | %$VERSION% |
+|  Release: | %$RELEASE% |
 |  Change History: | <!-- versions below in reverse order --> |
+|  01 Apr 2010 | V.1.1.2 Arthur Clemens: Allow topic data to be used without data structure. |
 |  20 Jun 2009 | V.1.1.1 Arthur Clemens: Fixed reading of =web.topic= notation in =createTopicData=. |
 |   8 Jun 2009 | V.1.1: Foswiki:Main.WillNorris: Ported to Foswiki |
 |  24 Oct 2008 | V.1.0: Initial version |
-|  Foswiki Dependency: | %$DEPENDENCIES% |
-|  CPAN Dependencies: | none |
-|  Other Dependencies: | none |
+|  Dependencies: | %$DEPENDENCIES% |
 |  Perl Version: | 5.005 |
-| Home: | http://foswiki.org/Extensions/%TOPIC% |
-| Support: | http://foswiki.org/Support/%TOPIC% |
+|  Home: | http://foswiki.org/Extensions/%TOPIC% |
+|  Support: | http://foswiki.org/Support/%TOPIC% |

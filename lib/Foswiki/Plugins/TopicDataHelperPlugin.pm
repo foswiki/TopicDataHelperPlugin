@@ -1,5 +1,5 @@
 # Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
-# Copyright (C) 2008 Arthur Clemens, arthur@visiblearea.com
+# Copyright (C) 2008-2010 Arthur Clemens, arthur@visiblearea.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -17,22 +17,14 @@ package Foswiki::Plugins::TopicDataHelperPlugin;
 use strict;
 use Foswiki::Func;
 
-use vars qw($VERSION $RELEASE $debug
-);
-
-# This should always be $Rev$ so that Foswiki can determine the checked-in
-# status of the plugin. It is used by the build automation tools, so
-# you should leave it alone.
-$VERSION = '$Rev$';
-
-# This is a free-form string you can use to "name" your own plugin version.
-# It is *not* used by the build automation tools, but is reported as part
-# of the version number in PLUGINDESCRIPTIONS.
-$RELEASE = '1.1.1';
+our $VERSION = '$Rev$';
+our $RELEASE = '1.1.2';
+our $SHORTDESCRIPTION =
+  'helper plugin for collecting, filtering and sorting data objects';
+our $NO_PREFS_IN_TOPIC = 1;
 
 our $pluginName = 'TopicDataHelperPlugin';
 our $debug;
-our $NO_PREFS_IN_TOPIC = 1;
 our %sortDirections = ( 'ASCENDING', 1, 'NONE', 0, 'DESCENDING', -1 );
 my $topic;
 my $web;
@@ -56,8 +48,7 @@ sub initPlugin {
     $debug = Foswiki::Func::getPreferencesFlag('TOPICDATAHELPERPLUGIN_DEBUG');
 
     # Plugin correctly initialized
-    _debug(
-        "Foswiki::Plugins::${pluginName}::initPlugin( $inWeb.$inTopic ) is OK");
+    _debug("initPlugin( $inWeb.$inTopic ) is OK");
 
     return 1;
 }
@@ -81,7 +72,7 @@ Creates a hash of web => topics, using this structure:
 	}
 )
 
-The value '1' is temporary to define which topic are valid, and will be replaced by a data structure later on.
+The value '1' is temporary to define which topics are valid, and will be replaced by a data structure later on.
 
 Use one paramater or all.
 When no =inWebs= is passed, the current web is assumed.
@@ -112,24 +103,24 @@ sub createTopicData {
       ( $webs eq '*' )
       ? Foswiki::Func::getListOfWebs('allowed')
       : split( qr/[\s,]+/o, $webs );
-    foreach my $web (@webs) {
-        next if $web =~ qr/^_.*?$/o;    # do not list webs with underscore
-        next if $topicData{$web};           # already done
-        next if ( $$excludeWebs{$web} );    # skip if web is to be excluded
+    foreach my $listedWeb (@webs) {
+
+        next if $listedWeb =~ qr/^_.*?$/o;    # do not list webs with underscore
+        next if $topicData{$listedWeb};          # already done
+        next if ( $$excludeWebs{$listedWeb} );   # skip if web is to be excluded
 
         # get this web's topics
         my @webTopics =
           ( $inTopics eq '*' )
-          ? Foswiki::Func::getTopicList($web)
+          ? Foswiki::Func::getTopicList($listedWeb)
           : split( qr/[\s,]+/o, $inTopics );
 
         # prefix with web name
-        foreach my $topic (@webTopics) {
-
+        foreach my $listedTopic (@webTopics) {
             my $dotWeb   = undef;
             my $dotTopic = undef;
-            if ( $topic =~ m/^((.*?)\.)*(.*?)$/o ) {
-                $dotWeb = $2 || $web;
+            if ( $listedTopic =~ m/^((.*?)\.)*(.*?)$/o ) {
+                $dotWeb = $2 || $listedWeb;
                 $dotTopic = $3;
             }
             next if ( $$excludeWebs{$dotWeb} );  # skip if web is to be excluded
@@ -143,12 +134,10 @@ sub createTopicData {
             $topicData{$dotWeb}{$dotTopic} = 1;
         }
 
-        if ($debug) {
-            use Data::Dumper;
-            _debug("$pluginName -- createTopicData : just added to web $web:");
-            _debug( Dumper( $topicData{$web} ) );
-        }
+        _debug("createTopicData : just added to web $listedWeb:");
+        _debugData( $topicData{$listedWeb} );
     }
+
     return \%topicData;
 }
 
@@ -233,7 +222,7 @@ sub insertObjectData {
 
     if ($debug) {
         use Data::Dumper;
-        _debug("$pluginName -- insertObjectData completed");
+        _debug("insertObjectData completed");
         _debug( "inTopicData=" . Dumper($inTopicData) );
     }
 }
@@ -561,9 +550,17 @@ sub getListOfObjectData {
         # {web} => hash of topics
         while ( ( my $topic, my $objectDataHash ) = each %$topicHash ) {
 
-            while ( ( my $key, my $value ) = each %$objectDataHash ) {
+            if ( $objectDataHash != 1 ) {
 
-                push @objects, $$value;
+                while ( ( my $key, my $value ) = each %$objectDataHash ) {
+
+                    push @objects, $$value;
+                }
+            }
+            else {
+
+                # no topic data, only the temporary value of 1
+                push @objects, $topic;
             }
         }
     }
@@ -760,11 +757,32 @@ sub makeHashFromString {
     return \%hash;
 }
 
-sub _debug {
-    my ($inText) = @_;
+=pod
 
-    Foswiki::Func::writeDebug($inText)
-      if $debug;
+Shorthand debugging call.
+
+=cut
+
+sub _debug {
+    my ($text) = @_;
+
+    return if !$debug;
+
+    $text = "$pluginName: $text";
+
+    #print STDERR $text . "\n";
+    Foswiki::Func::writeDebug("$text");
+}
+
+sub _debugData {
+    my ( $text, $data ) = @_;
+
+    return if !$debug;
+    Foswiki::Func::writeDebug("$pluginName; $text:");
+    if ($data) {
+        eval
+'use Data::Dumper; local $Data::Dumper::Terse = 1; local $Data::Dumper::Indent = 1; Foswiki::Func::writeDebug(Dumper($data));';
+    }
 }
 
 1;

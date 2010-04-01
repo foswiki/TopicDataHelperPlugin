@@ -1,13 +1,14 @@
-use strict;
 
 package TopicDataHelperPluginTests;
 use FoswikiFnTestCase;
 our @ISA = qw( FoswikiFnTestCase );
+use strict;
+use Error qw( :try );
 
 use Foswiki;
 use Foswiki::Meta;
 use Foswiki::Func;
-use Error qw( :try );
+use Foswiki::Plugins::TopicDataHelperPlugin;
 use Foswiki::UI::Save;
 use Foswiki::OopsException;
 use Devel::Symdump;
@@ -107,6 +108,8 @@ my $allFields = "Author, Status, Remarks";
 my $allTopics =
 "$testForms{topic1}{name}, $testForms{topic2}{name}, $testForms{topic3}{name}, $testForms{topic4}{name}, $testForms{topic5}{name}";
 
+my $defaultUsersWeb = 'TemporaryTopicDataHelperPluginTestsUsersWeb';
+
 sub new {
     my $self = shift()->SUPER::new( 'TopicDataHelperPluginTests', @_ );
     return $self;
@@ -117,6 +120,14 @@ sub set_up {
 
     $this->SUPER::set_up();
     $this->_createForms();
+    $this->{plugin_name} = 'TopicDataHelperPlugin';
+    
+    $Foswiki::cfg{Plugins}{ $this->{plugin_name} }{Enabled} = 1;
+    $Foswiki::cfg{Plugins}{ $this->{plugin_name} }{Module} =
+      "Foswiki::Plugins::$this->{plugin_name}";
+    $this->{session}->finish();
+    $this->{session} = new Foswiki();    # default user
+    $Foswiki::Plugins::SESSION = $this->{session};
 }
 
 # This formats the text up to immediately before <nop>s are removed, so we
@@ -176,7 +187,7 @@ sub test_createTopicData_default_no_web {
       Foswiki::Plugins::TopicDataHelperPlugin::createTopicData( $webs,
         $excludeWebs, $topics, $excludeTopics );
 
-    my $resultTopics           = $topicData->{'Main'};
+    my $resultTopics           = $topicData->{ $defaultUsersWeb };
     my @resultTopicsList       = sort keys %{$resultTopics};
     my $resultTopicsListString = join( ",", @resultTopicsList );
     $this->assert_equals( 'WebHome,WebPreferences', $resultTopicsListString );
