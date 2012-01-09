@@ -20,7 +20,7 @@ use Assert;
 use Foswiki::Func();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.1.3';
+our $RELEASE = '1.1.4';
 our $SHORTDESCRIPTION =
   'helper plugin for collecting, filtering and sorting data objects';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -690,7 +690,7 @@ sub _sortObjectsByProperty {
               sort {
                 ( $a->{$inSortKey} || 0 ) <=> ( $b->{$inSortKey} || 0 )
                   ||    # secondary key hardcoded
-                  ( $a->{$inSecondaryKey} || 0 ) cmp ( $b->{$inSecondaryKey} || 0 )
+                  ( $a->{$inSecondaryKey} || '' ) cmp ( $b->{$inSecondaryKey} || '' )
               } @objectData;
         }
         else {
@@ -698,7 +698,7 @@ sub _sortObjectsByProperty {
               sort {
                 ( $b->{$inSortKey} || 0 ) <=> ( $a->{$inSortKey} || 0)
                   ||    # secondary key hardcoded
-                  ( $b->{$inSecondaryKey} || 0 ) cmp ( $a->{$inSecondaryKey} || 0 )
+                  ( $b->{$inSecondaryKey} || '' ) cmp ( $a->{$inSecondaryKey} || '' )
               } @objectData;
         }
     }
